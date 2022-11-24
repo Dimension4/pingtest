@@ -156,9 +156,12 @@ fn display_summary(report: &Report) {
         packet_loss: String,
         min: String,
         median: String,
-        #[tabled(rename = "95% Percentile")]
+        mean: String,
+        #[tabled(rename = "5% High")]
         per95: String,
         max: String,
+        #[tabled(rename = "Std Dev")]
+        stddev: String,
     }
 
     fn compute_stats(t: &TargetReport) -> Stats {
@@ -177,10 +180,16 @@ fn display_summary(report: &Report) {
                 packet_loss: "100.00 %".into(),
                 min: "-".into(),
                 median: "-".into(),
+                mean: "-".into(),
                 per95: "-".into(),
                 max: "-".into(),
+                stddev: "-".into(),
             }
         } else {
+            let mean = in_time.iter().fold(0f64, |t, x| t + (*x as f64)) / (in_time.len() as f64);
+            let sqr_err = in_time.iter().fold(0f64, |t, x| t + ((*x as f64 - mean).powi(2)));
+            let stddev = (sqr_err / in_time.len() as f64).sqrt();
+
             Stats {
                 ip: &t.ip,
                 host: &t.host_name,
@@ -188,8 +197,10 @@ fn display_summary(report: &Report) {
                 packet_loss: format!("{:>6.2} %", 1.0 - in_time.len() as f32 / ping_count as f32),
                 min: format!("{:>4} ms", in_time[0]),
                 median: format!("{:>4} ms", in_time[in_time.len() / 2]),
+                mean: format!("{:>4.0} ms", mean),
                 per95: format!("{:>4} ms", in_time[(in_time.len() as f64 * 0.95) as usize]),
                 max: format!("{:>4} ms", in_time[in_time.len() - 1]),
+                stddev: format!("{:>4.0} ms", stddev)
             }
         }
     }
